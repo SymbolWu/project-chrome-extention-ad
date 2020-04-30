@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Form, Input, Button, Select } from 'antd';
 
 const RuleItem: React.FC<any> = (props) => {
-  // const currentForm = React.createRef();
+  const { location: { origin } } = window;
   const [form] = Form.useForm();
   const {
     value: { id, URL, webName, elementId, elementClassName, },
@@ -32,7 +32,7 @@ const RuleItem: React.FC<any> = (props) => {
       form={form}
       initialValues={{
         webName,
-        URL,
+        URL: URL || origin,
         elementId,
         elementClassName
       }}

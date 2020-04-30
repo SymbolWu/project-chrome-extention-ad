@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Collapse, Empty, Button, Card, Popover, Popconfirm } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Collapse, Empty, Button, Card, Popover, Popconfirm, Tooltip } from 'antd';
+import { DeleteOutlined, PoweroffOutlined } from '@ant-design/icons';
 import RuleItem from '../RuleItem';
+// import { sendMessageBack } from '../sendMessage'
 // import { getLocalStorageRules, setLocalStorageRules } from './utils';
 import styles from './style.less';
 
@@ -14,7 +15,15 @@ interface RuleProps {
   elementId?: string[];
   elementClassName?: string[];
 }
-
+/**
+	 * 向background发送消息
+	 * @params strAction string 执行方法
+	 * @params data 数据
+	 * @params callback function 回调函数
+	 */
+const sendMessageBack = (action: string, data: any, callback: Function) => {
+  chrome.extension.sendMessage({ 'action': action, 'data': data }, callback);
+}
 const getLocalStorageRules = () => {
   const rulesInLoacalStorage = localStorage.getItem('WXBADRemove');
   if (rulesInLoacalStorage) {
@@ -23,6 +32,7 @@ const getLocalStorageRules = () => {
   } else {
     return []
   }
+
 }
 const setLocalStorageRules = (rules: any[]) => {
   const rulesString = JSON.stringify(rules);
@@ -35,7 +45,7 @@ const getID = (length: number) => {
 
 const App = () => {
   let addForm: any = null;
-  const [rules, setRules] = useState(getLocalStorageRules());
+  const [rules, setRules] = useState<any[]>([]);
   const [visible, setVisible] = useState(false);
   const onVisibleChange = (visible: boolean) => {
     if (!visible) {
@@ -57,10 +67,14 @@ const App = () => {
       addForm.resetFields();
       setVisible(false);
     }
-    setRules(newRules);
-    setLocalStorageRules(newRules);
+    sendMessageBack('save', newRules, (result: boolean) => {
+      if (result) {
+        setRules(newRules);
+      }
+    })
+    // setRules(newRules);
+    // setLocalStorageRules(newRules);
   }
-
   const deleteRule = (id: string) => {
     const newRules = rules.concat();
     const index = rules.findIndex((rule: any) => rule.id === id);
@@ -68,14 +82,26 @@ const App = () => {
     setRules(newRules);
     setLocalStorageRules(newRules);
   }
-
-  const genExtra = (ruleId: string) => (
+  const entryTargetSite = (url: string) => {
+    window.open(url, '_blank');
+  }
+  const genExtra = (rule: any) => (
     <>
+      <Tooltip title="进入网站">
+        <PoweroffOutlined
+          className={styles.entry}
+          onClick={event => {
+            event.stopPropagation();
+            entryTargetSite(rule.URL);
+          }}
+        />
+      </Tooltip>
+
       <Popconfirm
         title="确定删除?"
         onConfirm={(event: any) => {
           event.stopPropagation();
-          deleteRule(ruleId)
+          deleteRule(rule.id)
         }}
         onCancel={(event: any) => {
           event.stopPropagation();
@@ -89,6 +115,12 @@ const App = () => {
       </Popconfirm>
     </>
   );
+  useEffect(() => {
+    sendMessageBack('list', {}, (rules: any[]) => {
+      console.log('rules::', rules);
+      setRules(rules || []);
+    })
+  }, [])
   return (
     <div className={styles.container}>
       <Card
@@ -110,12 +142,12 @@ const App = () => {
         }
       >
         {
-          rules.length
+          rules && rules.length
             ? (
               <Collapse>
                 {
                   rules.map((rule: any) => (
-                    <Panel header={rule.webName} key={rule.id} extra={genExtra(rule.id)}>
+                    <Panel header={rule.webName} key={rule.id} extra={genExtra(rule)}>
                       <RuleItem value={rule} sendValue={getValue} />
                     </Panel>
                   ))
@@ -125,21 +157,6 @@ const App = () => {
             : <Empty />
         }
       </Card>
-      {/* <div>
-        <div>content</div>
-        <div className="ADTest">AD className</div>
-        <div id="ADremove">AD ID</div>
-        <div style={
-          {
-            width: '200px',
-            height: '200px',
-            position: 'fixed',
-            backgroundColor: 'yellow',
-            bottom: '0px',
-            right: '0px'
-          }
-        }></div>
-      </div> */}
     </div>
   )
 }
