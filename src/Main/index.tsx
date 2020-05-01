@@ -2,19 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Collapse, Empty, Button, Card, Popover, Popconfirm, Tooltip } from 'antd';
 import { DeleteOutlined, PoweroffOutlined } from '@ant-design/icons';
 import RuleItem from '../RuleItem';
-// import { sendMessageBack } from '../sendMessage'
-// import { getLocalStorageRules, setLocalStorageRules } from './utils';
 import styles from './style.less';
 
 const { Panel } = Collapse;
-
-interface RuleProps {
-  id: string;
-  URL: string;
-  webName: string;
-  elementId?: string[];
-  elementClassName?: string[];
-}
 /**
 	 * 向background发送消息
 	 * @params strAction string 执行方法
@@ -23,20 +13,6 @@ interface RuleProps {
 	 */
 const sendMessageBack = (action: string, data: any, callback: Function) => {
   chrome.extension.sendMessage({ 'action': action, 'data': data }, callback);
-}
-const getLocalStorageRules = () => {
-  const rulesInLoacalStorage = localStorage.getItem('WXBADRemove');
-  if (rulesInLoacalStorage) {
-    const rules = JSON.parse(rulesInLoacalStorage);
-    return rules;
-  } else {
-    return []
-  }
-
-}
-const setLocalStorageRules = (rules: any[]) => {
-  const rulesString = JSON.stringify(rules);
-  localStorage.setItem('WXBADRemove', rulesString);
 }
 
 const getID = (length: number) => {
@@ -47,8 +23,9 @@ const App = () => {
   let addForm: any = null;
   const [rules, setRules] = useState<any[]>([]);
   const [visible, setVisible] = useState(false);
+  const [addDisables, setAddDisables] = useState(false);
   const onVisibleChange = (visible: boolean) => {
-    if (!visible) {
+    if (!visible && addForm) {
       addForm.resetFields();
     }
     setVisible(visible);
@@ -56,7 +33,13 @@ const App = () => {
   const getForm = (form: any) => {
     addForm = form;
   }
-  const getValue = async (values: any) => {
+  // const getCurrentUrl = (url: string) => {
+  //   const index = rules.findIndex((rule: any) => rule.URL === url);
+  //   if (index !== -1) {
+  //     setAddDisables(true);
+  //   }
+  // }
+  const saveRule = async (values: any) => {
     const newRules = rules.concat();
     if (values.id) {
       const index = rules.findIndex((rule: any) => rule.id === values.id);
@@ -72,15 +55,17 @@ const App = () => {
         setRules(newRules);
       }
     })
-    // setRules(newRules);
-    // setLocalStorageRules(newRules);
   }
   const deleteRule = (id: string) => {
     const newRules = rules.concat();
     const index = rules.findIndex((rule: any) => rule.id === id);
     newRules.splice(index, 1);
     setRules(newRules);
-    setLocalStorageRules(newRules);
+    sendMessageBack('save', newRules, (result: boolean) => {
+      if (result) {
+        setRules(newRules);
+      }
+    })
   }
   const entryTargetSite = (url: string) => {
     window.open(url, '_blank');
@@ -117,7 +102,6 @@ const App = () => {
   );
   useEffect(() => {
     sendMessageBack('list', {}, (rules: any[]) => {
-      console.log('rules::', rules);
       setRules(rules || []);
     })
   }, [])
@@ -129,7 +113,11 @@ const App = () => {
           <Popover
             content={
               <div style={{ padding: '16px', width: '625px' }}>
-                <RuleItem value={{}} sendForm={getForm} sendValue={getValue} />
+                <RuleItem value={{}}
+                  sendForm={getForm}
+                  sendValue={saveRule}
+                  // sendUrl={getCurrentUrl}
+                />
               </div>
             }
             visible={visible}
@@ -137,7 +125,9 @@ const App = () => {
             placement="bottomRight"
             trigger="click"
           >
-            <Button type="primary">添加规则</Button>
+            <Button type="primary" disabled={addDisables}>
+              {addDisables ? '该网站已有屏蔽规则' : '添加规则'}
+            </Button>
           </Popover>
         }
       >
@@ -148,7 +138,7 @@ const App = () => {
                 {
                   rules.map((rule: any) => (
                     <Panel header={rule.webName} key={rule.id} extra={genExtra(rule)}>
-                      <RuleItem value={rule} sendValue={getValue} />
+                      <RuleItem value={rule} sendValue={saveRule} />
                     </Panel>
                   ))
                 }

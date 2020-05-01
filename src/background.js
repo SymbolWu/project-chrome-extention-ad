@@ -6,7 +6,6 @@ chrome.extension.onMessage.addListener(function (request, _, sendResponse) {
     if (rulesInLoacalStorage || rulesInLoacalStorage !== 'undefined') {
       rules = JSON.parse(rulesInLoacalStorage);
     }
-    console.log('listlist::', rules);
     sendResponse(rules);
   }
 

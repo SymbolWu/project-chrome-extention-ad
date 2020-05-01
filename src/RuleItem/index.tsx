@@ -1,13 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Form, Input, Button, Select } from 'antd';
 
 const RuleItem: React.FC<any> = (props) => {
-  const { location: { origin } } = window;
   const [form] = Form.useForm();
   const {
     value: { id, URL, webName, elementId, elementClassName, },
     sendForm,
     sendValue,
+    // sendUrl
   } = props;
 
   const onFinish = (values: any) => {
@@ -24,15 +24,20 @@ const RuleItem: React.FC<any> = (props) => {
     if (sendForm) {
       sendForm(form)
     }
-  })
+    // chrome.tabs.getSelected(null, ({ url: fromUrl }: any) => {
+    //   const [protocol, _, domain] = fromUrl.split('/');
+    //   const URL = `${protocol}//${domain}`;
+    //   form.setFieldsValue({ URL });
+    //   sendUrl(URL);
+    // });
+  }, [])
   return (
     <Form
       name="basic"
-      // ref={currentForm}
       form={form}
       initialValues={{
         webName,
-        URL: URL || origin,
+        URL: URL || '',
         elementId,
         elementClassName
       }}
